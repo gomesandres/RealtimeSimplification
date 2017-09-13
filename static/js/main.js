@@ -664,7 +664,6 @@ class WebGl{
         geo.translate(minusMin.x,minusMin.y,minusMin.z);
         geo.scale(maxRange,maxRange,maxRange);
         geo.translate(1.0,1.0,1.0);
-        //geo.scale(3,3,3);
 
         geo.verticesNeedUpdate = true;
         this.min = geo.boundingBox.min;
@@ -676,9 +675,8 @@ class WebGl{
         
         var pos = geo.attributes.position;
         this.gridHelper = new THREE.GridBoxHelper( this.min, this.max, this.CellWidth );
-        //this.scene.add( this.gridHelper );
+        this.scene.add( this.gridHelper );
 
-        var wireframe = true;
         if (this.Simplify){
             this.MeshSimplify();         
             this.Simplify = false;
@@ -697,13 +695,10 @@ class WebGl{
             Mesh.name = this.meshID.toString();
             this.meshID +=1 ;
             this.scene.add(Mesh);
-
-            if(wireframe){
-                var geom = new THREE.EdgesGeometry( geo, 0.0 ); // or WireframeGeometry
-                var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-                var wireframe = new THREE.LineSegments( geom, mat );
-                Mesh.add( wireframe );
-            }
+            var geom = new THREE.EdgesGeometry( geo, 0.0 ); // or WireframeGeometry
+            var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
+            this.wireframe = new THREE.LineSegments( geom, mat );
+            Mesh.add( this.wireframe );
         }
         this.animate();
     }
@@ -861,8 +856,8 @@ class WebGl{
         mesh.name = "Paso3" 
         var geom = new THREE.EdgesGeometry( geo, 0.0 ); // or WireframeGeometry
         var mate = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-        var wireframe = new THREE.LineLoop( geo,mat );
-        this.scene.add( wireframe );
+        this.wireframe = new THREE.LineLoop( geo,mat );
+        this.scene.add( this.wireframe );
 
         this.scene.add(mesh);    
 
@@ -1002,6 +997,8 @@ class WebGl{
         requestAnimationFrame( this.animate.bind(this) );
         this.stats.update();
         this.renderer.clear();
+        if (typeof this.wireframe !== 'undefined')this.wireframe.visible = document.getElementById("wireframe").value;
+        if (typeof this.gridHelper !== 'undefined')this.gridHelper.visible = document.getElementById("gridbox").value;
         this.renderer.render( this.scene, this.cam );
         this.controls.update();
         document.getElementById("CameraX").value = this.controls.object.position.x;

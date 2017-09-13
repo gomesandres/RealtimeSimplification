@@ -37,13 +37,17 @@
                             </li>
                         </ul>-->
                         <form class="navbar-form navbar-left" role="search">
-                            <div class="form-group">
+                            <div class=" form-group">
                                 <label title="Numero de divisiones" for="dimension">Divisiones</label>
                                 <input title="Numero de divisiones" type="text" class="form-control little" name="dimension" id="dimension" placeholder="2" value="2">
                                 <button type="button" onclick="WebglStart();" class="btn btn-default btn-primary">Cargar</button> 
                                 <input type="text" class="form-control medium" name="CameraX" id="CameraX" placeholder="9">
                                 <input type="text" class="form-control medium" name="CameraY" id="CameraY" placeholder="9">
                                 <input type="text" class="form-control medium" name="CameraZ" id="CameraZ" placeholder="9">
+                            </div>
+                            <div class="checkbox">
+                              <label><input type="checkbox" id="wireframe" value="">Wireframe</label>
+                              <label><input type="checkbox" id="gridbox" value="">Grid</label>
                             </div>
                         </form>
                     </div><!-- /.navbar-collapse -->
