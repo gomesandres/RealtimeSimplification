@@ -52,7 +52,7 @@ class WebGl{
         //utilizando el cpu en vez del gpu para facilitar la validación
         this.DEBUG = false; //Esta en desuso or los momentos.
 
-        this.static = '/static/';
+        this.static = './static/';
         this.Dim = Dim;
         this.RTDim = RTDim;
         this.scene = new THREE.Scene();
