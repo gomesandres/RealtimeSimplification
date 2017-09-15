@@ -73,7 +73,7 @@ class WebGl{
                                                 0.1, 
                                                 20000
                                             );
-        this.cam.position.set(3,2,3);
+        this.cam.position.set(1,3,1);
         this.cam.up = new THREE.Vector3(0,1,0)
         this.camRTT = new THREE.OrthographicCamera( -1,1, 1, -1, 0.1,1);
         this.camRTT.position.set(0,0,0);
@@ -211,7 +211,7 @@ class WebGl{
 
                 pos.x +=0.1;
                 pos.y +=0.1;
-                
+
                 //Take from the 0-RTDim range to the -1 - 1 Range
                 pos.x = ((pos.x / RTDim)*2.0) - 1.0;
                 pos.y = ((pos.y / RTDim)*2.0) - 1.0;
@@ -650,7 +650,7 @@ class WebGl{
         minusMin.multiplyScalar(-1.0);
         geo.translate(minusMin.x,minusMin.y,minusMin.z);
         geo.scale(maxRange,maxRange,maxRange);
-        geo.translate(1.0,1.0,1.0);
+        geo.translate(-0.5,-0.5,-0.5);
 
         geo.verticesNeedUpdate = true;
         this.min = geo.boundingBox.min;
@@ -990,9 +990,6 @@ class WebGl{
         if (typeof this.gridHelper !== 'undefined')this.gridHelper.visible = CheckGridbox
         this.renderer.render( this.scene, this.cam );
         this.controls.update();
-        document.getElementById("CameraX").value = this.controls.object.position.x;
-        document.getElementById("CameraY").value = this.controls.object.position.y;
-        document.getElementById("CameraZ").value = this.controls.object.position.z;
     }
 
     Cargarscenerio(){
@@ -1044,11 +1041,7 @@ class WebGl{
     }   
 }
 
-
-var webgl = null;
-var webgl2 = null;
-
-function WebglStart() {
+function WebglStart(obj) {
     TD = document.getElementById("dimension").value; // Dimensiones
     var Dim;
     if(TD != "" && 0 < TD && TD < 40 ){
@@ -1061,17 +1054,22 @@ function WebglStart() {
 
     var RTDim = Math.ceil(sqrt);
 
-
-    obj = "treehouse_logo.js"
-    //obj = "dodecahedron.json"
-    //obj = "tetrahedron-3d-shape.json"
-    //obj = "dodecahedron.obj"
-    //obj = "dodeca.obj"
-    //obj = "tetrahedron.obj"
-    //obj = "male02.obj"
-
     webgl = new WebGl("Original",Dim,RTDim);
     webgl2 = new WebGl("Simplificado",Dim,RTDim);
     webgl.load(obj);
     webgl2.load(obj,true);
 }    
+
+$(function(){
+    var obj = 'treehouse_logo.js'
+    WebglStart(obj);
+
+    $('.changeModel li').on('click', function(){
+        obj = $(this).attr("value");
+        WebglStart(obj);
+    });
+
+    $("#cargar").on('click',function(){
+        WebglStart(obj);
+    });
+});
