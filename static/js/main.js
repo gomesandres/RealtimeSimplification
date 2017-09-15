@@ -83,6 +83,9 @@ class WebGl{
         this.stats = new Stats();
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.top = '0px';
+        if(canvas == 'Simplificado'){
+            this.stats.domElement.style.right = '0px';
+        } 
         this.textures = [];
         this.PassOneResult = [];
         this.Simplify = false;
@@ -188,33 +191,17 @@ class WebGl{
 
             void main(void) {
                 vec3 pos;
-                //vec3 nVA = (VA/3.0)+1.0;
-                //vec3 nVB = (VB/3.0)+1.0;
-                //vec3 nVC = (VC/3.0)+1.0;
-                //vec3 nVertPos = resizeVec3(VC, max, min);
-
 
                 //First i take the vertex from the min-max range to the 0-Dim range
                 vec3 CellIndex = floor((VertPos - min)*Dim/(max - min));
-
-                //vec3 falseMin = vec3(1.0,1.0,1.0);
-                //vec3 falseMax = vec3(2.0,2.0,2.0);
-                //vec3 falseVertPos = (VertPos/3.0)+1.0;
-                //vec3 CellIndex2 = floor((falseVertPos - falseMin)*(Dim-1.0)/(falseMax - falseMin));
-                //DebugA = falseVertPos;
-                //DebugB = CellIndex2;
-                //DebugC = CellIndex;
-                //CellIndex = CellIndex2;
 
                 if(CellIndex.x == Dim)CellIndex.x--;
                 if(CellIndex.y == Dim)CellIndex.y--;
                 if(CellIndex.z == Dim)CellIndex.z--;
 
-
                 //Make the 3D index a 1D index
 
                 float temp = CellIndex.x + CellIndex.y * Dim + CellIndex.z*Dim*Dim ;
-
 
                 //Make the 1D index a 2D index
                 pos.y = floor(temp/RTDim);
@@ -222,9 +209,9 @@ class WebGl{
                 pos.z = 1.0;
                 // it seems that the vertex with index 0 are begin culled
 
-                pos.x = pos.x +1.0;
-                pos.y = pos.y +1.0;
-
+                pos.x +=0.1;
+                pos.y +=0.1;
+                
                 //Take from the 0-RTDim range to the -1 - 1 Range
                 pos.x = ((pos.x / RTDim)*2.0) - 1.0;
                 pos.y = ((pos.y / RTDim)*2.0) - 1.0;
@@ -997,8 +984,10 @@ class WebGl{
         requestAnimationFrame( this.animate.bind(this) );
         this.stats.update();
         this.renderer.clear();
-        if (typeof this.wireframe !== 'undefined')this.wireframe.visible = document.getElementById("wireframe").value;
-        if (typeof this.gridHelper !== 'undefined')this.gridHelper.visible = document.getElementById("gridbox").value;
+        var CheckWireframe = document.getElementById("wireframe").checked;
+        var CheckGridbox = document.getElementById("gridbox").checked;
+        if (typeof this.wireframe !== 'undefined')this.wireframe.visible = CheckWireframe;
+        if (typeof this.gridHelper !== 'undefined')this.gridHelper.visible = CheckGridbox
         this.renderer.render( this.scene, this.cam );
         this.controls.update();
         document.getElementById("CameraX").value = this.controls.object.position.x;
@@ -1086,16 +1075,3 @@ function WebglStart() {
     webgl.load(obj);
     webgl2.load(obj,true);
 }    
-
-document.getElementById("cargar").onclick = function(){
-    webgl = new WebGl("Original",Dim,RTDim);
-    
-    webgl2 = new WebGl("Simplificado",Dim,RTDim);
-    var File = document.getElementById("cargar").value;
-    var path = File.split("\\");
-    var Last = path[path.length - 1];
-    if(File){
-        webgl.load(Last);
-        webgl2.load(Last,true);
-    }
-}
