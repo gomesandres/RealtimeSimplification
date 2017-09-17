@@ -818,11 +818,24 @@ class WebGl{
         var pos = geo.attributes.position;
 
         var len = geo.attributes.position.count;
-        
-        var Move = new THREE.Float32Attribute(len,1);
 
+        len = len / 3.0;
+
+        var VertexIndex = new THREE.Float32Attribute(len,1);
+
+        for(var i=0;i<len;i++){
+            VertexIndex[i]=i;
+        }
+
+        sqrt = Math.sqrt(len);
+
+        this.p3dim = this.RTDim;
+        
+        geo.addAttribute( 'VB',  this.VB );
+        geo.addAttribute( 'VC',  this.VC );
+        geo.addAttribute( 'VA',  this.VA );
+        geo.addAttribute( 'VertexIndex',  VertexIndex );
         geo.addAttribute( 'VertPos',  pos );
-        geo.addAttribute( 'Move',  Move );
 
         var mat = new THREE.RawShaderMaterial( {
             uniforms: {
@@ -832,6 +845,7 @@ class WebGl{
                 CellWidth:{ type:'v3',value:this.CellWidth},
                 NoB:{ type:'i',value:this.NoB},
                 Dim:{ type:'f',value:this.Dim},
+                tdim:{ type:'f',value:this.p3dim},
                 RTDim:{ type:'f',value:this.RTDim}
             },
             vertexShader: this.vertexPass3,
@@ -1061,7 +1075,7 @@ function WebglStart(obj) {
 }    
 
 $(function(){
-    var obj = 'treehouse_logo.js'
+    var obj = 'dodecahedron.obj'
     WebglStart(obj);
 
     $('.changeModel li').on('click', function(){
