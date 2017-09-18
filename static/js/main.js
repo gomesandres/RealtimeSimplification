@@ -73,7 +73,7 @@ class WebGl{
                                                 0.1, 
                                                 20000
                                             );
-        this.cam.position.set(5,3,10);
+        this.cam.position.set(2.5,4,1);
         this.cam.up = new THREE.Vector3(0,1,0)
         this.camRTT = new THREE.OrthographicCamera( -1,1, 1, -1, 0.1,1);
         this.camRTT.position.set(0,0,0);
