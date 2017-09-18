@@ -4,7 +4,9 @@
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
 <script src="https://getbootstrap.com/docs/3.3/dist/js/bootstrap.min.js"></script> 
 <link rel="stylesheet" media="screen" href="https://getbootstrap.com/docs/3.3/dist/css/bootstrap.min.css">
-<script type="text/javascript" src="./static/js/three.min.js"></script>
+<script type="text/javascript" src="./static/js/three.js"></script>
+<script type="text/javascript" src="./static/js/QuickHull.js"></script>
+<script type="text/javascript" src="./static/js/ConvexGeometry.js"></script>
 <script type="text/javascript" src="./static/js/OrbitControls.js"></script>
 <script type="text/javascript" src="./static/js/less.js"></script>
 <script type="text/javascript" src="./static/js/stats.min.js"></script>
@@ -51,7 +53,7 @@
             <form class="navbar-form navbar-left">
               <div class="form-group">
                 <label for="dimension">Divisiones</label>
-              <input type="text" class="form-control little" name="dimension" id="dimension" placeholder="5" value="5">
+              <input type="text" class="form-control little" name="dimension" id="dimension" placeholder="32" value="32">
               </div>
               <button type="button" class="btn btn-default" id="cargar">Cargar</button>      
               <div class="checkbox navbar-btn">

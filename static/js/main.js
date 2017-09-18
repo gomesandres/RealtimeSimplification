@@ -73,13 +73,14 @@ class WebGl{
                                                 0.1, 
                                                 20000
                                             );
-        this.cam.position.set(1,3,1);
+        this.cam.position.set(5,3,10);
         this.cam.up = new THREE.Vector3(0,1,0)
         this.camRTT = new THREE.OrthographicCamera( -1,1, 1, -1, 0.1,1);
         this.camRTT.position.set(0,0,0);
         this.renderer.shadowMap.enabled = true;
         this.controls = new THREE.OrbitControls(this.cam, this.renderer.domElement);
         this.controls.userPanSpeed = 0.15;
+        this.controls.center.set( 2.5, 2.5, 2.5);
         this.stats = new Stats();
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.top = '0px';
@@ -396,31 +397,38 @@ class WebGl{
             uniform float RTDim; //Dimension of the Frambuffer/Texture/Viewport
             uniform int NoB; //Number of Buffers that can handle the video card
             uniform sampler2D newPosition[4];
-            uniform mat4 modelViewMatrix;                
-            uniform mat4 projectionMatrix;
 
+            uniform float tdim;
+
+            attribute float VInd;
             attribute vec3 VertPos;
+            attribute vec3 VA;
+            attribute vec3 VB;
+            attribute vec3 VC;
 
-            varying vec3 debug;
-            varying vec3 CellColor;
+            varying vec3 CellColor;            
+            varying vec4 RVA;
+            varying vec4 RVB;
+            varying vec4 RVC;
 
-            float rand(vec2 co){
-                return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
-            }
-
-            void main(void) {
-                vec3 pos;
+            vec3 VerToCellIndex(vec3 v){
 
                 //First i take the vertex from the min-max range to the 0-Dim range
-                vec3 CellIndex = floor((VertPos - min)*Dim/(max - min));
+                vec3 res = floor((v - min)*Dim/(max - min));
 
-                if(CellIndex.x == Dim)CellIndex.x--;
-                if(CellIndex.y == Dim)CellIndex.y--;
-                if(CellIndex.z == Dim)CellIndex.z--;
+                if(res.x == Dim)res.x--;
+                if(res.y == Dim)res.y--;
+                if(res.z == Dim)res.z--;
+
+                return res;
+            }
+
+            vec3 IndexToText(vec3 v){
+                vec3 pos;
 
                 //Make the 3D index a 1D index
 
-                float temp = CellIndex.x + CellIndex.y * Dim + CellIndex.z*Dim*Dim ;
+                float temp = v.x + v.y * Dim + v.z*Dim*Dim ;
 
                 //Make the 1D index a 2D index
                 pos.y = floor(temp/RTDim);
@@ -431,55 +439,48 @@ class WebGl{
                 pos.x +=0.1;
                 pos.y +=0.1;
 
-                vec3 Textpos = pos / RTDim;
-                vec4 result = texture2D( newPosition[0], Textpos.xy);
+                return pos;
+            }
 
+            vec3 TexToScreen(vec3 v,float d){
+                 //Take from the 0-d range to the -1 - 1 Range
+                v.x = ((v.x / d)*2.0) - 1.0;
+                v.y = ((v.y / d)*2.0) - 1.0;
+                return v;
+            }
 
-                //Take from the 0-RTDim range to the -1 - 1 Range
-                pos.x = ((pos.x / RTDim)*2.0) - 1.0;
-                pos.y = ((pos.y / RTDim)*2.0) - 1.0;
+            void main(void) {
+                if(VA == vec3(0.0,0.0,0.0)){
+                    gl_Position = vec4(-100000.0);
+                    gl_PointSize = 0.0;  
+                }else{              
+                    vec3 Tindex;
 
+                    Tindex.y = floor(VInd/tdim);
+                    Tindex.x = VInd - (Tindex.y * tdim);
+                    Tindex.z = 1.0;
 
-                vec3 CellMin = CellIndex * CellWidth;
-                vec3 CellMax = CellMin + CellWidth;
-                CellColor = vec3(rand(vec2(CellIndex.x)),
-                                rand(vec2(CellIndex.y)),
-                                rand(vec2(CellIndex.z)));
+                    Tindex.x +=0.1;
+                    Tindex.y +=0.1;
 
-                /*
+                    Tindex.x = ((Tindex.x / tdim)*2.0) - 1.0;
+                    Tindex.y = ((Tindex.y / tdim)*2.0) - 1.0;
 
-                if( CellMin.x < result.x){
-                    result.x = CellMin.x;
-                }else{
-                    if( result.x < CellMax.x ){
-                        result.x = CellMax.x;
+                    vec3 VAIndex = VerToCellIndex(VA);
+                    vec3 VBIndex = VerToCellIndex(VB);
+                    vec3 VCIndex = VerToCellIndex(VC);
+
+                    if(VAIndex != VBIndex && VBIndex != VCIndex && VAIndex != VCIndex){
+                        RVA = texture2D( newPosition[0], (IndexToText(VAIndex)/RTDim).xy);
+                        RVB = texture2D( newPosition[0], (IndexToText(VBIndex)/RTDim).xy);
+                        RVC = texture2D( newPosition[0], (IndexToText(VCIndex)/RTDim).xy);
+                        gl_Position = vec4(Tindex, 1.0);
+                        gl_PointSize = 1.0;      
+                    }else{
+                        gl_Position = vec4(-100000.0);
+                        gl_PointSize = 0.0;  
                     }
                 }
-
-                if( CellMin.y < result.y){
-                    result.y = CellMin.y;
-                }else{
-                    if( result.y < CellMax.y ){
-                        result.y = CellMax.y;
-                    }
-                }
-
-                if( CellMin.z < result.z){
-                    result.z = CellMin.z;
-                }else{
-                    if( result.z < CellMax.z ){
-                        result.z = CellMax.z;
-                    }
-                }
-
-                */
-    
-                debug = CellIndex.xyz;
-
-
-                //gl_Position = vec4(pos, 1.0);
-                //gl_PointSize = 1.0;      
-                gl_Position = projectionMatrix * modelViewMatrix * result;
             }
         `;
         
@@ -489,12 +490,14 @@ class WebGl{
             precision highp int;
             uniform int NoB;
 
-            varying vec3 debug;
-            varying vec3 CellColor;
+            varying vec4 RVA;
+            varying vec4 RVB;
+            varying vec4 RVC;
 
             void main(void) {
-                //gl_FragData[0] = vec4(0.0,0.0,0.0,1.0);
-                gl_FragData[0] = vec4(CellColor,1.0);
+                gl_FragData[0] = RVA;
+                gl_FragData[1] = RVB;
+                gl_FragData[2] = RVC;
             }      
         `;
     }
@@ -519,14 +522,15 @@ class WebGl{
         gl.blendEquation(gl.FUNC_ADD);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.enable(gl.BLEND);
-        this.Fbuffer.width = this.RTDim;
-        this.Fbuffer.height = this.RTDim;
+        //Maximun texture size 
+        this.Fbuffer.width = 2048;
+        this.Fbuffer.height = 2048;
         gl.bindTexture(gl.TEXTURE_2D, null);
         gl.bindRenderbuffer(gl.RENDERBUFFER, null);
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     }
 
-    setTextureBuffer(texts){
+    setTextureBuffer(texts,width,height){
         var gl = this.gl;
         gl.bindFramebuffer(gl.FRAMEBUFFER, this.Fbuffer);
         var Textures = [];
@@ -545,8 +549,8 @@ class WebGl{
                 gl.TEXTURE_2D, 
                 0, 
                 gl.RGBA, 
-                this.RTDim, 
-                this.RTDim, 
+                width, 
+                height, 
                 0, 
                 gl.RGBA, 
                 gl.FLOAT, 
@@ -650,7 +654,7 @@ class WebGl{
         minusMin.multiplyScalar(-1.0);
         geo.translate(minusMin.x,minusMin.y,minusMin.z);
         geo.scale(maxRange,maxRange,maxRange);
-        geo.translate(-0.5,-0.5,-0.5);
+        geo.translate(2.0,2.0,2.0);
 
         geo.verticesNeedUpdate = true;
         this.min = geo.boundingBox.min;
@@ -694,12 +698,11 @@ class WebGl{
         var gl = this.gl;       
         var geo = this.geometry;
         var len = geo.attributes.position.count;
-        var VB = new THREE.Float32Attribute(len * 3,3);
-        var VC = new THREE.Float32Attribute(len * 3,3);
-        var VA = new THREE.Float32Attribute(len * 3,3);
+        this.VB = new THREE.Float32Attribute(len * 3,3);
+        this.VC = new THREE.Float32Attribute(len * 3,3);
+        this.VA = new THREE.Float32Attribute(len * 3,3);
         var VDraw = new THREE.Float32Attribute(len,1);
         var pos = geo.attributes.position;
-        console.log(pos.array);
         var indexA = 0;
         var indexB = 0;
         var indexC = 0;
@@ -711,35 +714,23 @@ class WebGl{
         var tempRange = this.max.clone();
         tempRange.sub(this.min);
 
-        for(var i=0;i<len;i++){
-            if(i%3==0){
-                indexA = i;
-                indexB = i+1;
-                indexC = i+2;
-            }
+       for(var i=0;i<len;i+=3){
+            this.VA.copyAt(i,pos,i);
+            this.VB.copyAt(i,pos,i+1);
+            this.VC.copyAt(i,pos,i+2);
 
-            VA.copyAt(i,pos,indexA);
-            VB.copyAt(i,pos,indexB);
-            VC.copyAt(i,pos,indexC);
+            this.VA.setXYZ ( i+1, 0.0,0.0,0.0 );
+            this.VB.setXYZ ( i+1, 0.0,0.0,0.0 );
+            this.VC.setXYZ ( i+1, 0.0,0.0,0.0 );
 
-            if(Vertices.includes(i)){
-                VDraw.setX(i,1.0); 
-            }else{
-                VDraw.setX(i,0.0); 
-            }
-            
-            var verPos = new THREE.Vector3();
-            verPos.fromArray(pos.array,i*3);
-            verPos.sub(this.min);
-            verPos.multiplyScalar(this.Dim);
-            verPos.divide(tempRange);
-            verPos.floor();
-            //console.log(verPos);
+            this.VA.setXYZ ( i+2, 0.0,0.0,0.0 );
+            this.VB.setXYZ ( i+2, 0.0,0.0,0.0 );
+            this.VC.setXYZ ( i+2, 0.0,0.0,0.0 );
         }
 
-        geo.addAttribute( 'VB',  VB );
-        geo.addAttribute( 'VC',  VC );
-        geo.addAttribute( 'VA',  VA );
+        geo.addAttribute( 'VB',  this.VB );
+        geo.addAttribute( 'VC',  this.VC );
+        geo.addAttribute( 'VA',  this.VA );
         geo.addAttribute( 'VDraw',  VDraw );
         geo.addAttribute( 'VertPos',  pos );
 
@@ -762,7 +753,7 @@ class WebGl{
         this.sceneRTT.add(mesh);
         this.renderer.setSize(this.RTDim,this.RTDim);
         this.Pass1Result = []; 
-        this.setTextureBuffer(this.Pass1Result);
+        this.setTextureBuffer(this.Pass1Result,this.RTDim,this.RTDim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
@@ -794,7 +785,7 @@ class WebGl{
         this.sceneRTT.add(Mesh);
         this.renderer.setSize(this.RTDim,this.RTDim);
         this.Pass2Result = [];
-        this.setTextureBuffer(this.Pass2Result);
+        this.setTextureBuffer(this.Pass2Result,this.RTDim,this.RTDim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
@@ -819,22 +810,24 @@ class WebGl{
 
         var len = geo.attributes.position.count;
 
-        len = len / 3.0;
+        var VInd = new THREE.Float32Attribute(len,1);
 
-        var VertexIndex = new THREE.Float32Attribute(len,1);
-
-        for(var i=0;i<len;i++){
-            VertexIndex[i]=i;
+        for(var i=0.0;i<len;i++){
+            if(i%3==0){
+                VInd.setX(i,i);
+            }else{
+                VInd.setX(i,0.0);
+            }
         }
 
         sqrt = Math.sqrt(len);
 
-        this.p3dim = this.RTDim;
+        this.p3dim = Math.ceil(sqrt);
         
         geo.addAttribute( 'VB',  this.VB );
         geo.addAttribute( 'VC',  this.VC );
         geo.addAttribute( 'VA',  this.VA );
-        geo.addAttribute( 'VertexIndex',  VertexIndex );
+        geo.addAttribute( 'VInd',  VInd );
         geo.addAttribute( 'VertPos',  pos );
 
         var mat = new THREE.RawShaderMaterial( {
@@ -853,29 +846,82 @@ class WebGl{
             side: THREE.DoubleSide
         });
 
-        var mesh = new THREE.Mesh(geo,mat);
-        mesh.name = "Paso3" 
-        var geom = new THREE.EdgesGeometry( geo, 0.0 ); // or WireframeGeometry
-        var mate = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
-        this.wireframe = new THREE.LineLoop( geo,mat );
-        this.scene.add( this.wireframe );
-
-        this.scene.add(mesh);    
-
-
         var mesh2 = new THREE.Points(geo,mat);
-
         mesh2.name = "Simplificado"
         this.sceneRTT.add(mesh2);
-        this.renderer.setSize(this.RTDim,this.RTDim);
+
+        this.renderer.setSize(this.p3dim,this.p3dim);
         this.Pass3Result = []; 
-        this.setTextureBuffer(this.Pass3Result);
+        this.setTextureBuffer(this.Pass3Result,this.p3dim,this.p3dim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Simplificado");
+    }
+
+    stepFour(){
+        var gl = this.gl;
+        var framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        var len = this.p3dim * this.p3dim * 4;
+        var VApixels = new Float32Array(len);
+        var VBpixels = new Float32Array(len);
+        var VCpixels = new Float32Array(len);
+        var Nonzero = [];
+        
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+            gl.TEXTURE_2D, this.Pass3Result[0].__webglTexture, 0);
+        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+             gl.FLOAT, VApixels);
+        
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+            gl.TEXTURE_2D, this.Pass3Result[1].__webglTexture, 0);
+        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+             gl.FLOAT, VBpixels);
+        
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+            gl.TEXTURE_2D, this.Pass3Result[2].__webglTexture, 0);
+        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+             gl.FLOAT, VCpixels);
+
+        var temp = [];
+
+        var Ti = 0.0;
+        var Pi = 0.0;
+
+        for(var i = 0; i<(len/4);i++){
+            Pi = i*4;
+            if(VApixels[Pi] != 0.0){
+                temp[Ti++] = VApixels[Pi];
+                temp[Ti++] = VApixels[Pi+1];
+                temp[Ti++] = VApixels[Pi+2];
+
+                temp[Ti++] = VBpixels[Pi];
+                temp[Ti++] = VBpixels[Pi+1];
+                temp[Ti++] = VBpixels[Pi+2];
+
+                temp[Ti++] = VCpixels[Pi];
+                temp[Ti++] = VCpixels[Pi+1];
+                temp[Ti++] = VCpixels[Pi+2];
+            }
+        }
+
+        var vertices = new Float32Array(temp);
+
+        var geometry = new THREE.BufferGeometry();
+
+        // itemSize = 3 because there are 3 values (components) per vertex
+        geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+        var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+        var mesh = new THREE.Mesh( geometry, material );
+
+        var geo = new THREE.WireframeGeometry( geometry );
+        var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
+        this.wireframe = new THREE.LineSegments( geo, mat );
+        this.scene.add( this.wireframe );
+        this.scene.add(mesh);
     }
 
     MeshSimplify(){
@@ -885,7 +931,9 @@ class WebGl{
 
         this.stepThree();
 
-        var showZeros = true;
+        this.stepFour();
+
+        var showZeros = false;
 
         var gl = this.gl;
         var size = this.RTDim * this.RTDim * 4;
@@ -960,12 +1008,13 @@ class WebGl{
         }.bind(this));
 
         indexPass = 1;  
+        var size = this.p3dim * this.p3dim * 4;
         this.Pass3Result.forEach(function(entry){
             var pixels = new Float32Array(size);
             //Codigo para imprimir en consola el resultado del paso 1
             gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
                 gl.TEXTURE_2D, entry.__webglTexture, 0);
-            gl.readPixels(0, 0, this.RTDim, this.RTDim, gl.RGBA,
+            gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
                  gl.FLOAT, pixels);
             var Nonzero = [];
             pixels.forEach(function(entry){
@@ -1075,7 +1124,7 @@ function WebglStart(obj) {
 }    
 
 $(function(){
-    var obj = 'dodecahedron.obj'
+    var obj = 'treehouse_logo.js'
     WebglStart(obj);
 
     $('.changeModel li').on('click', function(){
