@@ -83,7 +83,7 @@ class WebGl{
         this.controls.center.set( 2.5, 2.5, 2.5);
         this.stats = new Stats();
         this.stats.domElement.style.position = 'absolute';
-        this.stats.domElement.style.top = '0px';
+        this.stats.domElement.style.bottom = '0px';
         if(canvas == 'Simplificado'){
             this.stats.domElement.style.right = '0px';
         } 
@@ -665,6 +665,7 @@ class WebGl{
         this.CellWidth.divideScalar(this.Dim);
         
         var pos = geo.attributes.position;
+        document.getElementById("OriginalFaces").innerText = geo.attributes.position.count / 3;
         this.gridHelper = new THREE.GridBoxHelper( this.min, this.max, this.CellWidth );
         this.scene.add( this.gridHelper );
 
@@ -914,8 +915,17 @@ class WebGl{
 
         // itemSize = 3 because there are 3 values (components) per vertex
         geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
-        var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
-        var mesh = new THREE.Mesh( geometry, material );
+        var mat = new THREE.MeshPhongMaterial( {
+            color: 0xff0000,
+            polygonOffset: true,
+            polygonOffsetFactor: 1, // positive value pushes polygon further away
+            polygonOffsetUnits: 1
+        } );
+        var mesh = new THREE.Mesh( geometry, mat );
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.geometry.computeVertexNormals();
+        mesh.geometry.computeFaceNormals();
 
         var geo = new THREE.WireframeGeometry( geometry );
         var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 2 } );
@@ -1107,7 +1117,7 @@ class WebGl{
 function WebglStart(obj) {
     TD = document.getElementById("dimension").value; // Dimensiones
     var Dim;
-    if(TD != "" && 0 < TD && TD < 40 ){
+    if(TD != "" && 0 < TD && TD < 256 ){
         Dim = parseInt(TD);
     }
 
