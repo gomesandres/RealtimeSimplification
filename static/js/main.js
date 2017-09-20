@@ -646,6 +646,7 @@ class WebGl{
     }
 
     cargarModelo(object){
+        this.hideDialog();
         if(this.obj){
             var geometry = null
             object.traverse(function (child) {
@@ -712,7 +713,6 @@ class WebGl{
             this.wireframe = new THREE.LineSegments( geom, mat );
             Mesh.add( this.wireframe );
         }
-        this.hideDialog();
         this.animate();
     }
 
