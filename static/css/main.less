@@ -3,22 +3,52 @@ body {
   height: 100%;
   margin: 0px;
 }
+#barra{
+    position: relative;
+}
 .container{
-    height: 100px;
+    display: block;
+    float:top;
     position: absolute;
-    right: 0;
-    left: 0;
-    z-index: 20;
-
+    height: 50px  !important;
+    width: 100%  !important;
+}
+.navbar{
+    background-color:#FFFFFF;
 }
 #Original{
     position: absolute;
     left:0px  !important;
+    top:0px;
 }
 
 #Simplificado{
     position: absolute;
     right:0px;
+    top:0px;
+}
+#infoleft{
+    background-color:#000c39;
+    opacity: 0.9;
+    cursor: pointer;
+    position: absolute;
+    color:#FFFFFF;
+    visibility:hidden;
+    padding:20px;
+    top: 40%  !important;
+    right:66%  !important;
+}
+
+#inforight{
+    background-color:#000c39;
+    opacity: 0.9;
+    cursor: pointer;
+    position: absolute;
+    color:#FFFFFF;
+    visibility:hidden;
+    padding:20px;
+    top: 40%  !important;
+    left:70%  !important;
 }
 
 .little{

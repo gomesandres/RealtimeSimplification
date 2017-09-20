@@ -47,14 +47,12 @@ function MinInVector(Vector){
 }
 
 class WebGl{
-    constructor(canvas,Dim,RTDim) {
+    constructor(canvas) {
         //Variable de debuggeo, si esta en true realizara las operaciones
         //utilizando el cpu en vez del gpu para facilitar la validación
         this.DEBUG = false; //Esta en desuso or los momentos.
 
         this.static = './static/';
-        this.Dim = Dim;
-        this.RTDim = RTDim;
         this.scene = new THREE.Scene();
         this.sceneRTT = new THREE.Scene();
         this.canvas = document.getElementById(canvas);
@@ -86,13 +84,16 @@ class WebGl{
         this.stats.domElement.style.bottom = '0px';
         if(canvas == 'Simplificado'){
             this.stats.domElement.style.right = '0px';
-        } 
+            this.dialog = document.getElementById("inforight");
+        }else{
+            this.stats.domElement.style.left = '0px';
+            this.dialog = document.getElementById("infoleft");
+        }
         this.textures = [];
         this.PassOneResult = [];
         this.Simplify = false;
         this.meshID = 0;
         this.setShaders();
-        this.Cargarscenerio(this.scene);
         document.body.appendChild( this.stats.domElement );
         window.addEventListener( 'resize', this.resize.bind(this), false );
         this.initGL();
@@ -587,11 +588,35 @@ class WebGl{
         this.renderer.setSize( this.WIDTH, this.HEIGHT );
     }
 
+    setDialogText(Text){
+        this.dialog.style.visibility='visible'
+        this.dialog.innerText = Text;
+    }
+    hideDialog(){
+        this.dialog.style.visibility='hidden' 
+    }
+
+
     load(Modelo,simplify=false){
         var loader = null
         var ext = Modelo.split(".").last()
         var manager = new THREE.LoadingManager();
+        var TD = document.getElementById("dimension").value; // Dimensiones
+        this.Dim;
+        if(TD != "" && 0 < TD && TD < 256 ){
+            this.Dim = parseInt(TD);
+        }
 
+        var cubic = ownCubic(this.Dim);
+
+        var sqrt = Math.sqrt(cubic);
+
+        this.RTDim = Math.ceil(sqrt);
+
+        while(this.scene.children.length > 0){ 
+            this.scene.remove(this.scene.children[0]); 
+        }
+        this.Cargarscenerio(this.scene);
         manager.onProgress = function ( item, loaded, total ) {
             console.log( item, loaded, total );
         };
@@ -616,16 +641,11 @@ class WebGl{
         var url = this.static+"files/"+Modelo;
         var Mesh = null
         this.Simplify = simplify;
+        this.setDialogText("Cargando geometria");
         loader.load(url,this.cargarModelo.bind(this));
     }
 
     cargarModelo(object){
-        TD = document.getElementById("dimension").value; // Dimensiones
-        var Dim;
-        if(TD != "" && 0 < TD && TD < 40 ){
-            Dim = TD;
-        }
-
         if(this.obj){
             var geometry = null
             object.traverse(function (child) {
@@ -638,6 +658,7 @@ class WebGl{
         }else{
             this.geometry = new THREE.BufferGeometry().fromGeometry( object );
         }
+        this.obj = false;
 
         var geo = this.geometry;
 
@@ -665,7 +686,6 @@ class WebGl{
         this.CellWidth.divideScalar(this.Dim);
         
         var pos = geo.attributes.position;
-        document.getElementById("OriginalFaces").innerText = geo.attributes.position.count / 3;
         this.gridHelper = new THREE.GridBoxHelper( this.min, this.max, this.CellWidth );
         this.scene.add( this.gridHelper );
 
@@ -692,10 +712,12 @@ class WebGl{
             this.wireframe = new THREE.LineSegments( geom, mat );
             Mesh.add( this.wireframe );
         }
+        this.hideDialog();
         this.animate();
     }
 
     stepOne(){
+        this.setDialogText("Calculando error cuadrático");
         var gl = this.gl;       
         var geo = this.geometry;
         var len = geo.attributes.position.count;
@@ -761,9 +783,11 @@ class WebGl{
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Simplificado");
+        this.hideDialog();
     }
 
     stepTwo(){
+        this.setDialogText("Calculando vértices representativos");
         var gl = this.gl;
         var plane = new THREE.PlaneBufferGeometry( this.RTDim, this.RTDim );
 
@@ -794,9 +818,11 @@ class WebGl{
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Plano");
+        this.hideDialog();
     }
 
     stepThree(){
+        this.setDialogText("Extrayendo la malla del gpu");
         /*
         Se tiene que enviar de nuevo la malla original
         y las coordenadas representaste de cada celda
@@ -821,7 +847,7 @@ class WebGl{
             }
         }
 
-        sqrt = Math.sqrt(len);
+        var sqrt = Math.sqrt(len);
 
         this.p3dim = Math.ceil(sqrt);
         
@@ -860,9 +886,11 @@ class WebGl{
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Simplificado");
+        this.hideDialog();
     }
 
     stepFour(){
+        this.setDialogText("Generando nueva malla");
         var gl = this.gl;
         var framebuffer = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -932,6 +960,7 @@ class WebGl{
         this.wireframe = new THREE.LineSegments( geo, mat );
         this.scene.add( this.wireframe );
         this.scene.add(mesh);
+        this.hideDialog();
     }
 
     MeshSimplify(){
@@ -1114,35 +1143,39 @@ class WebGl{
     }   
 }
 
-function WebglStart(obj) {
-    TD = document.getElementById("dimension").value; // Dimensiones
-    var Dim;
-    if(TD != "" && 0 < TD && TD < 256 ){
-        Dim = parseInt(TD);
+
+var getUrlParameter = function getUrlParameter(sParam) {
+    var sPageURL = decodeURIComponent(window.location.search.substring(1)),
+        sURLVariables = sPageURL.split('&'),
+        sParameterName,
+        i;
+
+    for (i = 0; i < sURLVariables.length; i++) {
+        sParameterName = sURLVariables[i].split('=');
+
+        if (sParameterName[0] === sParam) {
+            return sParameterName[1] === undefined ? true : sParameterName[1];
+        }
     }
+};
 
-    cubic = ownCubic(Dim);
 
-    sqrt = Math.sqrt(cubic);
-
-    var RTDim = Math.ceil(sqrt);
-
-    webgl = new WebGl("Original",Dim,RTDim);
-    webgl2 = new WebGl("Simplificado",Dim,RTDim);
-    webgl.load(obj);
-    webgl2.load(obj,true);
-}    
+webgl = new WebGl("Original");
+webgl2 = new WebGl("Simplificado");
 
 $(function(){
     var obj = 'treehouse_logo.js'
-    WebglStart(obj);
+    webgl.load(obj);
+    webgl2.load(obj,true);
 
     $('.changeModel li').on('click', function(){
         obj = $(this).attr("value");
-        WebglStart(obj);
+        webgl.load(obj);
+        webgl2.load(obj,true);
     });
 
     $("#cargar").on('click',function(){
-        WebglStart(obj);
+        webgl.load(obj);
+        webgl2.load(obj,true);
     });
 });
