@@ -87,10 +87,12 @@ class WebGl{
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.bottom = '0px';
         if(canvas == 'Simplificado'){
+            this.stats.domElement.style.right = '0px';
             this.dialog = $("#inforight .log");
             this.caraslog = $("#inforight .caras");
             this.verticeslog = $("#inforight .vertices");
         }else{
+            this.stats.domElement.style.left = '0px';
             this.dialog = $("#infoleft .log");
             this.caraslog = $("#infoleft .caras");
             this.verticeslog = $("#infoleft .vertices");
@@ -995,6 +997,118 @@ class WebGl{
         this.wireframe = new THREE.LineSegments( geo, mat );
         this.scene.add( this.wireframe );
         this.scene.add(mesh);
+        this.debuglog();
+    }
+
+    debuglog(){
+        var showZeros = false;
+
+        var gl = this.gl;
+        var size = this.RTDim * this.RTDim * 4;
+        var framebuffer = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        var indexPass = 1;
+        this.Pass1Result.forEach(function(entry){
+            var pixels = new Float32Array(size);
+            //Codigo para imprimir en consola el resultado del paso 1
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+                gl.TEXTURE_2D, entry.__webglTexture, 0);
+            gl.readPixels(0, 0, this.RTDim, this.RTDim, gl.RGBA,
+                 gl.FLOAT, pixels);
+            if(indexPass==4){
+                var total= 0.0;
+                pixels.forEach(function(entry){
+                    total+=entry;
+                }.bind(this));
+                console.log("total de caras sumadas:"+total);
+            }
+            if(showZeros){
+                console.log("Paso 1, textura :" + indexPass++);
+                console.log(pixels);
+            }else{            
+                var Nonzero = [];
+                pixels.forEach(function(entry){
+                    if(entry != 0 ){
+                        Nonzero.push(entry)
+                    }
+                }.bind(this));
+                if(Nonzero.length > 0 ){
+                    console.log("Paso 1, textura :" + indexPass++);
+                    console.log(Nonzero);
+                    }
+            }
+
+            //Codigo para imprimir en consola el resultado del paso 1
+
+        }.bind(this));      
+
+        indexPass = 1;  
+        this.Pass2Result.forEach(function(entry){
+            var pixels = new Float32Array(size);
+            //Codigo para imprimir en consola el resultado del paso 1
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+                gl.TEXTURE_2D, entry.__webglTexture, 0);
+            gl.readPixels(0, 0, this.RTDim, this.RTDim, gl.RGBA,
+                 gl.FLOAT, pixels);
+            var Nonzero = [];
+            pixels.forEach(function(entry){
+                if(entry != 0){
+                    Nonzero.push(entry)
+                }
+            }.bind(this));
+            if(showZeros){
+                console.log("Paso 2, textura :" + indexPass++);
+                console.log(pixels);
+            }else{            
+                var Nonzero = [];
+                pixels.forEach(function(entry){
+                    if(entry != 0 ){
+                        Nonzero.push(entry)
+                    }
+                }.bind(this));
+                if(Nonzero.length > 0 ){
+                    console.log("Paso 2, textura :" + indexPass++);
+                    console.log(Nonzero);
+                    }
+            }
+            //Codigo para imprimir en consola el resultado del paso 1
+
+        }.bind(this));
+
+        indexPass = 1;  
+        var size = this.p3dim * this.p3dim * 4;
+        this.Pass3Result.forEach(function(entry){
+            var pixels = new Float32Array(size);
+            //Codigo para imprimir en consola el resultado del paso 1
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
+                gl.TEXTURE_2D, entry.__webglTexture, 0);
+            gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+                 gl.FLOAT, pixels);
+            var Nonzero = [];
+            pixels.forEach(function(entry){
+                if(entry != 0){
+                    Nonzero.push(entry)
+                }
+            }.bind(this));
+            if(showZeros){
+                console.log("Paso 3, textura :" + indexPass++);
+                console.log(pixels);
+            }else{            
+                var Nonzero = [];
+                pixels.forEach(function(entry){
+                    if(entry != 0 ){
+                        Nonzero.push(entry)
+                    }
+                }.bind(this));
+                if(Nonzero.length > 0 ){
+                    console.log("Paso 3, textura :" + indexPass++);
+                    console.log(Nonzero);
+                }
+            }
+            //Codigo para imprimir en consola el resultado del paso 1
+
+        }.bind(this));
+
     }
 
     animate() {
