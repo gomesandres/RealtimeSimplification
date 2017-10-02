@@ -46,6 +46,10 @@ function MinInVector(Vector){
     return ((x<y)?((x<z)?x:z):(y<z)?y:z);
 }
 
+function nearestPow2( aSize ){
+  return Math.pow( 2, Math.round( Math.log( aSize ) / Math.log( 2 ) ) ); 
+}
+
 class WebGl{
     constructor(canvas) {
         //Variable de debuggeo, si esta en true realizara las operaciones
@@ -83,12 +87,21 @@ class WebGl{
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.bottom = '0px';
         if(canvas == 'Simplificado'){
-            this.stats.domElement.style.right = '0px';
-            this.dialog = document.getElementById("inforight");
+            this.dialog = $("#inforight .log");
+            this.caraslog = $("#inforight .caras");
+            this.verticeslog = $("#inforight .vertices");
         }else{
-            this.stats.domElement.style.left = '0px';
-            this.dialog = document.getElementById("infoleft");
+            this.dialog = $("#infoleft .log");
+            this.caraslog = $("#infoleft .caras");
+            this.verticeslog = $("#infoleft .vertices");
         }
+        setInterval(function(){
+            //console.log(this.dialog);
+            this.dialog.contents().filter(function() {
+                    return this.nodeType == 3; //Node.TEXT_NODE
+                  }).first().remove();
+            this.dialog.children().first().remove();
+        }.bind(this), 3000);
         this.textures = [];
         this.PassOneResult = [];
         this.Simplify = false;
@@ -98,7 +111,6 @@ class WebGl{
         window.addEventListener( 'resize', this.resize.bind(this), false );
         this.initGL();
         this.initTextureFramebuffer();
-        this.animate();
     }
 
     setShaders(){
@@ -197,9 +209,9 @@ class WebGl{
                 //First i take the vertex from the min-max range to the 0-Dim range
                 vec3 CellIndex = floor((VertPos - min)*Dim/(max - min));
 
-                if(CellIndex.x == Dim)CellIndex.x--;
-                if(CellIndex.y == Dim)CellIndex.y--;
-                if(CellIndex.z == Dim)CellIndex.z--;
+                if(CellIndex.x == Dim)CellIndex.x-=1.0;
+                if(CellIndex.y == Dim)CellIndex.y-=1.0;
+                if(CellIndex.z == Dim)CellIndex.z-=1.0;
 
                 //Make the 3D index a 1D index
 
@@ -210,13 +222,15 @@ class WebGl{
                 pos.x = temp - (pos.y * RTDim);
                 pos.z = 1.0;
                 // it seems that the vertex with index 0 are begin culled
+ 
+                pos.x +=1.0;
+                pos.y +=1.0;
 
-                pos.x +=0.1;
-                pos.y +=0.1;
+                float trtdim = RTDim + 1.0;
 
                 //Take from the 0-RTDim range to the -1 - 1 Range
-                pos.x = ((pos.x / RTDim)*2.0) - 1.0;
-                pos.y = ((pos.y / RTDim)*2.0) - 1.0;
+                pos.x = ((pos.x / trtdim)*2.0) - 1.0;
+                pos.y = ((pos.y / trtdim)*2.0) - 1.0;
 
 
                 vec4 n =    vec4(   cross(VA,VB)+cross(VB,VC)+cross(VC,VA),
@@ -298,7 +312,7 @@ class WebGl{
             #extension GL_EXT_draw_buffers : enable
             precision highp float;
             precision highp int;
-            uniform float RTDim;
+            uniform float TexDim;
 
             uniform sampler2D quadricError[4];
             uniform vec3 CellWidth;
@@ -326,7 +340,7 @@ class WebGl{
             }
 
             void main(void) {
-                vec2 xy = gl_FragCoord.xy / RTDim;
+                vec2 xy = gl_FragCoord.xy / TexDim;
                 vec4 ForthText = texture2D( quadricError[3], xy);
                 float NumberFaces = ForthText.w;
 
@@ -398,8 +412,9 @@ class WebGl{
             uniform float RTDim; //Dimension of the Frambuffer/Texture/Viewport
             uniform int NoB; //Number of Buffers that can handle the video card
             uniform sampler2D newPosition[4];
+            uniform float TexDim;
 
-            uniform float tdim;
+            uniform float p3dim;
 
             attribute float VInd;
             attribute vec3 VertPos;
@@ -417,9 +432,9 @@ class WebGl{
                 //First i take the vertex from the min-max range to the 0-Dim range
                 vec3 res = floor((v - min)*Dim/(max - min));
 
-                if(res.x == Dim)res.x--;
-                if(res.y == Dim)res.y--;
-                if(res.z == Dim)res.z--;
+                if(res.x == Dim)res.x-=1.0;
+                if(res.y == Dim)res.y-=1.0;
+                if(res.z == Dim)res.z-=1.0;
 
                 return res;
             }
@@ -437,16 +452,18 @@ class WebGl{
                 pos.z = 1.0;
                 // it seems that the vertex with index 0 are begin culled
 
-                pos.x +=0.1;
-                pos.y +=0.1;
+                pos.x +=1.0;
+                pos.y +=1.0;
 
                 return pos;
             }
 
             vec3 TexToScreen(vec3 v,float d){
-                 //Take from the 0-d range to the -1 - 1 Range
-                v.x = ((v.x / d)*2.0) - 1.0;
-                v.y = ((v.y / d)*2.0) - 1.0;
+                 //Take from the 1-d+1 range to the -1~ - 1 Range
+
+                float td = d + 1.0;
+                v.x = ((v.x / td)*2.0) - 1.0;
+                v.y = ((v.y / td)*2.0) - 1.0;
                 return v;
             }
 
@@ -457,24 +474,28 @@ class WebGl{
                 }else{              
                     vec3 Tindex;
 
-                    Tindex.y = floor(VInd/tdim);
-                    Tindex.x = VInd - (Tindex.y * tdim);
+                    Tindex.y = floor(VInd/p3dim);
+                    Tindex.x = VInd - (Tindex.y * p3dim);
                     Tindex.z = 1.0;
 
-                    Tindex.x +=0.1;
-                    Tindex.y +=0.1;
+                    Tindex.x += 1.0;
+                    Tindex.y += 1.0;
 
-                    Tindex.x = ((Tindex.x / tdim)*2.0) - 1.0;
-                    Tindex.y = ((Tindex.y / tdim)*2.0) - 1.0;
+                    float ttdim = p3dim + 1.0;
+
+                    Tindex.x = ((Tindex.x / ttdim)*2.0) - 1.0;
+                    Tindex.y = ((Tindex.y / ttdim)*2.0) - 1.0;
 
                     vec3 VAIndex = VerToCellIndex(VA);
                     vec3 VBIndex = VerToCellIndex(VB);
                     vec3 VCIndex = VerToCellIndex(VC);
 
+                    float trtdim = RTDim + 1.0;
+
                     if(VAIndex != VBIndex && VBIndex != VCIndex && VAIndex != VCIndex){
-                        RVA = texture2D( newPosition[0], (IndexToText(VAIndex)/RTDim).xy);
-                        RVB = texture2D( newPosition[0], (IndexToText(VBIndex)/RTDim).xy);
-                        RVC = texture2D( newPosition[0], (IndexToText(VCIndex)/RTDim).xy);
+                        RVA = texture2D( newPosition[0], (IndexToText(VAIndex)/trtdim).xy);
+                        RVB = texture2D( newPosition[0], (IndexToText(VBIndex)/trtdim).xy);
+                        RVC = texture2D( newPosition[0], (IndexToText(VCIndex)/trtdim).xy);
                         gl_Position = vec4(Tindex, 1.0);
                         gl_PointSize = 1.0;      
                     }else{
@@ -523,7 +544,6 @@ class WebGl{
         gl.blendEquation(gl.FUNC_ADD);
         gl.blendFunc(gl.ONE, gl.ONE);
         gl.enable(gl.BLEND);
-        //Maximun texture size 
         this.Fbuffer.width = 2048;
         this.Fbuffer.height = 2048;
         gl.bindTexture(gl.TEXTURE_2D, null);
@@ -542,10 +562,13 @@ class WebGl{
             Textures[i].__webglTexture = gl.createTexture();
             gl.bindTexture(gl.TEXTURE_2D, Textures[i].__webglTexture );
             Textures[i].__webglInit = false;
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            console.log("Creating texture with dimensions: "+width+" "+height);
+            
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            
             gl.texImage2D(
                 gl.TEXTURE_2D, 
                 0, 
@@ -589,15 +612,14 @@ class WebGl{
     }
 
     setDialogText(Text){
-        this.dialog.style.visibility='visible'
-        this.dialog.innerText = Text;
-    }
-    hideDialog(){
-        this.dialog.style.visibility='hidden' 
+        console.log(Text);
+        this.dialog.append(document.createTextNode(Text));
+        this.dialog.append(document.createElement("br"));
     }
 
 
     load(Modelo,simplify=false){
+        this.setDialogText("Cargando geometria");
         var loader = null
         var ext = Modelo.split(".").last()
         var manager = new THREE.LoadingManager();
@@ -612,6 +634,8 @@ class WebGl{
         var sqrt = Math.sqrt(cubic);
 
         this.RTDim = Math.ceil(sqrt);
+        this.TexDim = this.RTDim + 2.0;
+        //this.RTDim = nearestPow2(sqrt);
 
         while(this.scene.children.length > 0){ 
             this.scene.remove(this.scene.children[0]); 
@@ -641,12 +665,11 @@ class WebGl{
         var url = this.static+"files/"+Modelo;
         var Mesh = null
         this.Simplify = simplify;
-        this.setDialogText("Cargando geometria");
         loader.load(url,this.cargarModelo.bind(this));
+        this.animate();
     }
 
     cargarModelo(object){
-        this.hideDialog();
         if(this.obj){
             var geometry = null
             object.traverse(function (child) {
@@ -691,9 +714,12 @@ class WebGl{
         this.scene.add( this.gridHelper );
 
         if (this.Simplify){
-            this.MeshSimplify();         
+            this.setDialogText("Calculando error cuadrático");
+            setTimeout(this.stepOne.bind(this),500);     
             this.Simplify = false;
         }else{       
+            this.caraslog.append(document.createTextNode(pos.count / 3));
+            this.verticeslog.append(document.createTextNode(pos.count));
             var Mesh;
             var mat = new THREE.MeshPhongMaterial( {
                 color: 0xff0000,
@@ -717,7 +743,6 @@ class WebGl{
     }
 
     stepOne(){
-        this.setDialogText("Calculando error cuadrático");
         var gl = this.gl;       
         var geo = this.geometry;
         var len = geo.attributes.position.count;
@@ -774,22 +799,22 @@ class WebGl{
         var mesh = new THREE.Points(geo,rttmat);
         mesh.name = "Simplificado"
         this.sceneRTT.add(mesh);
-        this.renderer.setSize(this.RTDim,this.RTDim);
+        this.renderer.setSize(this.TexDim,this.TexDim);
         this.Pass1Result = []; 
-        this.setTextureBuffer(this.Pass1Result,this.RTDim,this.RTDim);
+        this.setTextureBuffer(this.Pass1Result,this.TexDim,this.TexDim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
-        this.RemoveMesh("Simplificado");
-        this.hideDialog();
+        this.RemoveMesh("Simplificado");        
+        this.setDialogText("Calculando vértices representativos");
+        setTimeout(this.stepTwo.bind(this),500);
     }
 
     stepTwo(){
-        this.setDialogText("Calculando vértices representativos");
         var gl = this.gl;
-        var plane = new THREE.PlaneBufferGeometry( this.RTDim, this.RTDim );
+        var plane = new THREE.PlaneBufferGeometry( this.TexDim, this.TexDim );
 
         var pass2mat = new THREE.RawShaderMaterial({
             uniforms: {
@@ -799,6 +824,7 @@ class WebGl{
                 min:{ type:'v3',value:this.min},
                 NoB:{ type:'i',value:this.NoB},
                 Dim:{ type:'f',value:this.Dim},
+                TexDim:{ type:'f',value:this.TexDim},
                 RTDim:{ type:'f',value:this.RTDim}
             },
             vertexShader: this.vertexPass2,
@@ -808,9 +834,9 @@ class WebGl{
         var Mesh = new THREE.Mesh(plane,pass2mat);
         Mesh.name = "Plano"
         this.sceneRTT.add(Mesh);
-        this.renderer.setSize(this.RTDim,this.RTDim);
+        this.renderer.setSize(this.TexDim,this.TexDim);
         this.Pass2Result = [];
-        this.setTextureBuffer(this.Pass2Result,this.RTDim,this.RTDim);
+        this.setTextureBuffer(this.Pass2Result,this.TexDim,this.TexDim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
@@ -818,11 +844,11 @@ class WebGl{
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Plano");
-        this.hideDialog();
+        this.setDialogText("Extrayendo la malla del gpu");
+        setTimeout(this.stepThree.bind(this),500);
     }
 
     stepThree(){
-        this.setDialogText("Extrayendo la malla del gpu");
         /*
         Se tiene que enviar de nuevo la malla original
         y las coordenadas representaste de cada celda
@@ -850,6 +876,8 @@ class WebGl{
         var sqrt = Math.sqrt(len);
 
         this.p3dim = Math.ceil(sqrt);
+        this.p3Texdim = this.p3dim + 2.0;
+        //this.p3dim = nearestPow2(sqrt);
         
         geo.addAttribute( 'VB',  this.VB );
         geo.addAttribute( 'VC',  this.VC );
@@ -865,7 +893,8 @@ class WebGl{
                 CellWidth:{ type:'v3',value:this.CellWidth},
                 NoB:{ type:'i',value:this.NoB},
                 Dim:{ type:'f',value:this.Dim},
-                tdim:{ type:'f',value:this.p3dim},
+                p3dim:{ type:'f',value:this.p3dim},
+                TexDim:{ type:'f',value:this.TexDim},
                 RTDim:{ type:'f',value:this.RTDim}
             },
             vertexShader: this.vertexPass3,
@@ -877,24 +906,24 @@ class WebGl{
         mesh2.name = "Simplificado"
         this.sceneRTT.add(mesh2);
 
-        this.renderer.setSize(this.p3dim,this.p3dim);
+        this.renderer.setSize(this.p3Texdim,this.p3Texdim);
         this.Pass3Result = []; 
-        this.setTextureBuffer(this.Pass3Result,this.p3dim,this.p3dim);
+        this.setTextureBuffer(this.Pass3Result,this.p3Texdim,this.p3Texdim);
         gl.bindFramebuffer(gl.FRAMEBUFFER,this.Fbuffer); 
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.RemoveMesh("Simplificado");
-        this.hideDialog();
+        this.setDialogText("Generando nueva malla");
+        setTimeout(this.stepFour.bind(this),500);
     }
 
     stepFour(){
-        this.setDialogText("Generando nueva malla");
         var gl = this.gl;
         var framebuffer = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        var len = this.p3dim * this.p3dim * 4;
+        var len = this.p3Texdim * this.p3Texdim * 4;
         var VApixels = new Float32Array(len);
         var VBpixels = new Float32Array(len);
         var VCpixels = new Float32Array(len);
@@ -902,17 +931,17 @@ class WebGl{
         
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
             gl.TEXTURE_2D, this.Pass3Result[0].__webglTexture, 0);
-        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+        gl.readPixels(0, 0, this.p3Texdim, this.p3Texdim, gl.RGBA,
              gl.FLOAT, VApixels);
         
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
             gl.TEXTURE_2D, this.Pass3Result[1].__webglTexture, 0);
-        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+        gl.readPixels(0, 0, this.p3Texdim, this.p3Texdim, gl.RGBA,
              gl.FLOAT, VBpixels);
         
         gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
             gl.TEXTURE_2D, this.Pass3Result[2].__webglTexture, 0);
-        gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
+        gl.readPixels(0, 0, this.p3Texdim, this.p3Texdim, gl.RGBA,
              gl.FLOAT, VCpixels);
 
         var temp = [];
@@ -941,13 +970,19 @@ class WebGl{
 
         var geometry = new THREE.BufferGeometry();
 
+        var position = new THREE.BufferAttribute( vertices, 3 );
+        
+        this.caraslog.append(document.createTextNode(position.count / 3));
+        this.verticeslog.append(document.createTextNode(position.count));
+
         // itemSize = 3 because there are 3 values (components) per vertex
-        geometry.addAttribute( 'position', new THREE.BufferAttribute( vertices, 3 ) );
+        geometry.addAttribute( 'position', position);
         var mat = new THREE.MeshPhongMaterial( {
             color: 0xff0000,
             polygonOffset: true,
             polygonOffsetFactor: 1, // positive value pushes polygon further away
-            polygonOffsetUnits: 1
+            polygonOffsetUnits: 1,
+            side: THREE.DoubleSide
         } );
         var mesh = new THREE.Mesh( geometry, mat );
         mesh.castShadow = true;
@@ -960,126 +995,6 @@ class WebGl{
         this.wireframe = new THREE.LineSegments( geo, mat );
         this.scene.add( this.wireframe );
         this.scene.add(mesh);
-        this.hideDialog();
-    }
-
-    MeshSimplify(){
-        this.stepOne();
-
-        this.stepTwo();
-
-        this.stepThree();
-
-        this.stepFour();
-
-        var showZeros = false;
-
-        var gl = this.gl;
-        var size = this.RTDim * this.RTDim * 4;
-        var framebuffer = gl.createFramebuffer();
-        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-        var indexPass = 1;
-        this.Pass1Result.forEach(function(entry){
-            var pixels = new Float32Array(size);
-            //Codigo para imprimir en consola el resultado del paso 1
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
-                gl.TEXTURE_2D, entry.__webglTexture, 0);
-            gl.readPixels(0, 0, this.RTDim, this.RTDim, gl.RGBA,
-                 gl.FLOAT, pixels);
-            if(indexPass==4){
-                var total= 0.0;
-                pixels.forEach(function(entry){
-                    total+=entry;
-                }.bind(this));
-                console.log("total de caras sumadas:"+total);
-            }
-            if(showZeros){
-                console.log("Paso 1, textura :" + indexPass++);
-                console.log(pixels);
-            }else{            
-                var Nonzero = [];
-                pixels.forEach(function(entry){
-                    if(entry != 0 ){
-                        Nonzero.push(entry)
-                    }
-                }.bind(this));
-                if(Nonzero.length > 0 ){
-                    console.log("Paso 1, textura :" + indexPass++);
-                    console.log(Nonzero);
-                    }
-            }
-
-            //Codigo para imprimir en consola el resultado del paso 1
-
-        }.bind(this));      
-
-        indexPass = 1;  
-        this.Pass2Result.forEach(function(entry){
-            var pixels = new Float32Array(size);
-            //Codigo para imprimir en consola el resultado del paso 1
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
-                gl.TEXTURE_2D, entry.__webglTexture, 0);
-            gl.readPixels(0, 0, this.RTDim, this.RTDim, gl.RGBA,
-                 gl.FLOAT, pixels);
-            var Nonzero = [];
-            pixels.forEach(function(entry){
-                if(entry != 0){
-                    Nonzero.push(entry)
-                }
-            }.bind(this));
-            if(showZeros){
-                console.log("Paso 2, textura :" + indexPass++);
-                console.log(pixels);
-            }else{            
-                var Nonzero = [];
-                pixels.forEach(function(entry){
-                    if(entry != 0 ){
-                        Nonzero.push(entry)
-                    }
-                }.bind(this));
-                if(Nonzero.length > 0 ){
-                    console.log("Paso 2, textura :" + indexPass++);
-                    console.log(Nonzero);
-                    }
-            }
-            //Codigo para imprimir en consola el resultado del paso 1
-
-        }.bind(this));
-
-        indexPass = 1;  
-        var size = this.p3dim * this.p3dim * 4;
-        this.Pass3Result.forEach(function(entry){
-            var pixels = new Float32Array(size);
-            //Codigo para imprimir en consola el resultado del paso 1
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, 
-                gl.TEXTURE_2D, entry.__webglTexture, 0);
-            gl.readPixels(0, 0, this.p3dim, this.p3dim, gl.RGBA,
-                 gl.FLOAT, pixels);
-            var Nonzero = [];
-            pixels.forEach(function(entry){
-                if(entry != 0){
-                    Nonzero.push(entry)
-                }
-            }.bind(this));
-            if(showZeros){
-                console.log("Paso 3, textura :" + indexPass++);
-                console.log(pixels);
-            }else{            
-                var Nonzero = [];
-                pixels.forEach(function(entry){
-                    if(entry != 0 ){
-                        Nonzero.push(entry)
-                    }
-                }.bind(this));
-                if(Nonzero.length > 0 ){
-                    console.log("Paso 3, textura :" + indexPass++);
-                    console.log(Nonzero);
-                }
-            }
-            //Codigo para imprimir en consola el resultado del paso 1
-
-        }.bind(this));
-
     }
 
     animate() {

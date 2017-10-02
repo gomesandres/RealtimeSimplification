@@ -13,8 +13,7 @@
 <script type="text/javascript" src="./static/js/MTLLoader.js"></script>
 </head>
 <body>
-<div id="barra">
-  <div class="container">
+<div class="container" id="MainContainer">
     <nav class="navbar navbar-static-top">
       <div class="container-fluid">
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -52,14 +51,24 @@
           </ul>
         </div><!-- /.navbar-collapse -->
       </div><!-- /.container-fluid -->
-    </nav>
-  </div>
-</div>
+    </nav>  
 
-<canvas id="Original"></canvas>
-<div id="infoleft"></div>
-<canvas id="Simplificado" ></canvas>
-<div id="inforight"></div>
+    <canvas id="Original"></canvas>
+    <canvas id="Simplificado" ></canvas>
+
+    <div id="infoleft">
+      <div>Caras: <span class="caras"></span></div>
+      <div>Vertices: <span class="vertices"></span></div>
+      <div>Log: <span class="log"></span></div>
+    </div>
+    <div id="inforight">
+      <div>Caras: <span class="caras"></span></div>
+      <div>Vertices: <span class="vertices"></span></div>
+      <div>Log: <span class="log"></span></div>
+    </div>
+  </div>
+
+
 </body>
 
 <script type="text/javascript" src="./static/js/main.js"></script>
