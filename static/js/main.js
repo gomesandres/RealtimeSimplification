@@ -717,9 +717,17 @@ class WebGl{
 
         if (this.Simplify){
             this.setDialogText("Calculando error cuadrático");
-            setTimeout(this.stepOne.bind(this),500);     
+            setTimeout(this.stepOne.bind(this),100);     
             this.Simplify = false;
         }else{       
+            this.caraslog.contents().filter(function() {
+                    return this.nodeType == 3; //Node.TEXT_NODE
+                  }).first().remove();
+
+            this.verticeslog.contents().filter(function() {
+                    return this.nodeType == 3; //Node.TEXT_NODE
+                  }).first().remove();
+
             this.caraslog.append(document.createTextNode(pos.count / 3));
             this.verticeslog.append(document.createTextNode(pos.count));
             var Mesh;
@@ -973,6 +981,13 @@ class WebGl{
         var geometry = new THREE.BufferGeometry();
 
         var position = new THREE.BufferAttribute( vertices, 3 );
+        this.caraslog.contents().filter(function() {
+            return this.nodeType == 3; //Node.TEXT_NODE
+            }).first().remove();
+
+        this.verticeslog.contents().filter(function() {
+            return this.nodeType == 3; //Node.TEXT_NODE
+            }).first().remove();
         
         this.caraslog.append(document.createTextNode(position.count / 3));
         this.verticeslog.append(document.createTextNode(position.count));
