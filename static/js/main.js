@@ -180,10 +180,9 @@ class WebGl{
             attribute vec3 VA;
             attribute vec3 VB;
             attribute vec3 VC;
-            attribute float VDraw;
             attribute vec3 VertPos;
 
-            varying float Result[16];
+            varying float Result[13];
             varying vec3 DebugA;
             varying vec3 DebugB;
             varying vec3 DebugC;
@@ -205,9 +204,8 @@ class WebGl{
                 return result;
             }
 
-            void main(void) {
+            vec3 calculateCuadratic(){
                 vec3 pos;
-
                 //First i take the vertex from the min-max range to the 0-Dim range
                 vec3 CellIndex = floor((VertPos - min)*Dim/(max - min));
 
@@ -240,10 +238,6 @@ class WebGl{
                             );
 
 
-                //vec4 n =    vec4(   cross(nVA,nVB)+cross(nVB,nVC)+cross(nVC,nVA),
-                //                    -dot(nVA,cross(nVB,nVC))
-                //            );
-
                 mat4 cuadraticError = vectorTranspose(n,n);
 
                 Result[0]= cuadraticError[0][0];
@@ -259,14 +253,27 @@ class WebGl{
                 Result[10]= VertPos.x;
                 Result[11]= VertPos.y;
                 Result[12]= VertPos.z;
-                Result[13]= 1.0;
 
-                //if(VDraw == 0.0){
-                //    pos = vec3(-100.0,-100.0,-100.0);
-                //}
+                return pos;
 
-                gl_Position = vec4(pos, 1.0);
-                gl_PointSize = 1.0;      
+            }
+
+            void main(void) {
+                if( VA == VertPos ){
+                    gl_Position = vec4(calculateCuadratic(), 1.0);
+                    gl_PointSize = 1.0;    
+                }
+
+                if( VB == VertPos && VA != VB ){
+                    gl_Position = vec4(calculateCuadratic(), 1.0);
+                    gl_PointSize = 1.0;    
+                }
+                  
+                if( VC == VertPos && VA != VC && VB != VC ){
+                    gl_Position = vec4(calculateCuadratic(), 1.0);
+                    gl_PointSize = 1.0;    
+                }
+
             }
         `;
         
@@ -276,25 +283,16 @@ class WebGl{
             precision highp int;
             uniform int NoB;
 
-            varying float Result[16];
+            varying float Result[13];
             varying vec3 DebugA;
             varying vec3 DebugB;
             varying vec3 DebugC;
 
             void main(void) {
-                //gl_FragData[0] = vec4(1.0,1.0,1.0,1.0);
-                //gl_FragData[1] = vec4(1.0,1.0,1.0,1.0);
-                //gl_FragData[2] = vec4(1.0,1.0,1.0,1.0);
-
-                //gl_FragData[0] = vec4(DebugA,1.0);
-                //gl_FragData[1] = vec4(DebugB,1.0);
-                //gl_FragData[2] = vec4(DebugC,1.0);
-                
                 gl_FragData[0] = vec4(Result[0],Result[1],Result[2],Result[3]);
                 gl_FragData[1] = vec4(Result[4],Result[5],Result[6],Result[7]);
                 gl_FragData[2] = vec4(Result[8],Result[9],0.0,1.0);
                 gl_FragData[3] = vec4(Result[10],Result[11],Result[12],1.0);
-                //gl_FragData[3] = vec4(0.0,0.0,0.0,1.0);
             }      
         `;
 
@@ -470,7 +468,7 @@ class WebGl{
             }
 
             void main(void) {
-                if(VA == vec3(0.0,0.0,0.0)){
+                if(VInd == 0.0){
                     gl_Position = vec4(-100000.0);
                     gl_PointSize = 0.0;  
                 }else{              
@@ -751,7 +749,6 @@ class WebGl{
         this.VB = new THREE.Float32Attribute(len * 3,3);
         this.VC = new THREE.Float32Attribute(len * 3,3);
         this.VA = new THREE.Float32Attribute(len * 3,3);
-        var VDraw = new THREE.Float32Attribute(len,1);
         var pos = geo.attributes.position;
         var indexA = 0;
         var indexB = 0;
@@ -769,19 +766,18 @@ class WebGl{
             this.VB.copyAt(i,pos,i+1);
             this.VC.copyAt(i,pos,i+2);
 
-            this.VA.setXYZ ( i+1, 0.0,0.0,0.0 );
-            this.VB.setXYZ ( i+1, 0.0,0.0,0.0 );
-            this.VC.setXYZ ( i+1, 0.0,0.0,0.0 );
+            this.VA.copyAt(i+1,pos,i);
+            this.VB.copyAt(i+1,pos,i+1);
+            this.VC.copyAt(i+1,pos,i+2);
 
-            this.VA.setXYZ ( i+2, 0.0,0.0,0.0 );
-            this.VB.setXYZ ( i+2, 0.0,0.0,0.0 );
-            this.VC.setXYZ ( i+2, 0.0,0.0,0.0 );
+            this.VA.copyAt(i+2,pos,i);
+            this.VB.copyAt(i+2,pos,i+1);
+            this.VC.copyAt(i+2,pos,i+2);
         }
 
         geo.addAttribute( 'VB',  this.VB );
         geo.addAttribute( 'VC',  this.VC );
         geo.addAttribute( 'VA',  this.VA );
-        geo.addAttribute( 'VDraw',  VDraw );
         geo.addAttribute( 'VertPos',  pos );
 
         var rttmat = new THREE.RawShaderMaterial( {
@@ -879,7 +875,6 @@ class WebGl{
 
         this.p3dim = Math.ceil(sqrt);
         this.p3Texdim = this.p3dim + 2.0;
-        //this.p3dim = nearestPow2(sqrt);
         
         geo.addAttribute( 'VB',  this.VB );
         geo.addAttribute( 'VC',  this.VC );
@@ -973,8 +968,14 @@ class WebGl{
         var geometry = new THREE.BufferGeometry();
 
         var position = new THREE.BufferAttribute( vertices, 3 );
-        
+        this.caraslog.contents().filter(function() {
+            return this.nodeType == 3; //Node.TEXT_NODE
+        }).first().remove();
         this.caraslog.append(document.createTextNode(position.count / 3));
+
+        this.verticeslog.contents().filter(function() {
+            return this.nodeType == 3; //Node.TEXT_NODE
+        }).first().remove();
         this.verticeslog.append(document.createTextNode(position.count));
 
         // itemSize = 3 because there are 3 values (components) per vertex
