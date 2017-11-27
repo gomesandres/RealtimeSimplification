@@ -1,3 +1,15 @@
+var urlParams = {};
+location.search.replace(
+    new RegExp("([^?=&]+)(=([^&]*))?", "g"),
+    function($0, $1, $2, $3) {
+      urlParams[$1] = $3;
+    }
+);
+
+if(urlParams["dimension"]){
+document.getElementById("dimension").value = urlParams["dimension"];
+}
+
 function ownCubic(x){return x*x*x;}
 
 function setStatic(static_url){static = static_url;}
@@ -68,6 +80,9 @@ class WebGl{
             antialias:true,
             canvas : this.canvas
         });
+
+        this.NewMesh = false;
+
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
         this.renderer.autoClear = false;
         this.cam = new THREE.PerspectiveCamera( 45, 
@@ -715,9 +730,17 @@ class WebGl{
 
         if (this.Simplify){
             this.setDialogText("Calculando error cuadrático");
-            setTimeout(this.stepOne.bind(this),500);     
+            setTimeout(this.stepOne.bind(this),100);     
             this.Simplify = false;
         }else{       
+            this.caraslog.contents().filter(function() {
+                    return this.nodeType == 3; //Node.TEXT_NODE
+                  }).first().remove();
+
+            this.verticeslog.contents().filter(function() {
+                    return this.nodeType == 3; //Node.TEXT_NODE
+                  }).first().remove();
+
             this.caraslog.append(document.createTextNode(pos.count / 3));
             this.verticeslog.append(document.createTextNode(pos.count));
             var Mesh;
@@ -970,12 +993,13 @@ class WebGl{
         var position = new THREE.BufferAttribute( vertices, 3 );
         this.caraslog.contents().filter(function() {
             return this.nodeType == 3; //Node.TEXT_NODE
-        }).first().remove();
-        this.caraslog.append(document.createTextNode(position.count / 3));
+            }).first().remove();
 
         this.verticeslog.contents().filter(function() {
             return this.nodeType == 3; //Node.TEXT_NODE
-        }).first().remove();
+            }).first().remove();
+
+        this.caraslog.append(document.createTextNode(position.count / 3));
         this.verticeslog.append(document.createTextNode(position.count));
 
         // itemSize = 3 because there are 3 values (components) per vertex
@@ -998,6 +1022,7 @@ class WebGl{
         this.wireframe = new THREE.LineSegments( geo, mat );
         this.scene.add( this.wireframe );
         this.scene.add(mesh);
+        this.NewMesh = mesh;
         this.debuglog();
     }
 
@@ -1124,6 +1149,13 @@ class WebGl{
         this.controls.update();
     }
 
+    get_new_mesh(){     
+        if(this.NewMesh){        
+            var exporter = new THREE.OBJExporter();
+            return exporter.parse( this.NewMesh );
+        }
+    }
+
     Cargarscenerio(){
         this.scene.fog = new THREE.Fog( 0xffffff, 1, 300 );
         this.scene.fog.color.setHSL( 0.6, 0, 1 );
@@ -1189,14 +1221,15 @@ var getUrlParameter = function getUrlParameter(sParam) {
     }
 };
 
-
 webgl = new WebGl("Original");
 webgl2 = new WebGl("Simplificado");
+
 
 $(function(){
     var obj = 'treehouse_logo.js'
     webgl.load(obj);
     webgl2.load(obj,true);
+
 
     $('.changeModel li').on('click', function(){
         obj = $(this).attr("value");
@@ -1204,8 +1237,40 @@ $(function(){
         webgl2.load(obj,true);
     });
 
-    $("#cargar").on('click',function(){
+    $("#NuevoModelo").on('change',function(){
+        var file = document.getElementById("NuevoModelo").value;    
+        var path = file.split("\\");
+        obj = path[path.length - 1];
         webgl.load(obj);
         webgl2.load(obj,true);
     });
+
+    var cargar = function(e){
+        if(e.type == "click" || e.keyCode == 13){
+            webgl.load(obj);
+            webgl2.load(obj,true);
+        }
+    }
+
+    $("#cargar")
+        .click(cargar)
+        .keyup(cargar);
+
+    $('#DownModel').on('click', function(){
+        var element = document.createElement('a');
+        element.setAttribute(
+            'href', 
+            'data:text/plain;charset=utf-8,' 
+            + encodeURIComponent(webgl2.get_new_mesh())
+        );
+        element.setAttribute('download', "result.obj");
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    });
+
 });

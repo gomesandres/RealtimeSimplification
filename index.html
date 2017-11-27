@@ -1,3 +1,4 @@
+</html>
 <html><head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <title>Simplificacion de Mallas en tiempo Real</title>
@@ -11,48 +12,55 @@
 <link rel="stylesheet" type="text/css" href="./static/css/main.less">
 <script type="text/javascript" src="./static/js/OBJLoader.js"></script>
 <script type="text/javascript" src="./static/js/MTLLoader.js"></script>
+<script type="text/javascript" src="./static/js/OBJExporter.js"></script>
 </head>
 <body>
-<div class="container">
-    <nav class="navbar navbar-toggleable-md navbar-light bg-faded">
-      <div class="container-fluid">
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-          <form class="navbar-form navbar-left">
-            <div class="form-group">
-              <label for="dimension">Divisiones</label>
-              <input type="text" class="form-control little" name="dimension" 
-              id="dimension" placeholder="32" value="32">
-            </div>
-            <button type="button" class="btn btn-default" id="cargar">Cargar</button>      
-            <div class="checkbox navbar-btn">
-                <label class="navbar-link" for="wireframe">
-                    <input type="checkbox" class="autosubmit" id="wireframe" value="true">
-                    Wireframes
-                </label>
-            </div>
-            <div class="checkbox navbar-btn">
-                <label class="navbar-link" for="gridbox">
-                    <input type="checkbox" class="autosubmit" id="gridbox" value="true">
-                    Grid
-                </label>
-            </div>
-          </form>
-          <ul class="nav navbar-nav navbar-right">
-              <li class="dropdown">
-                  <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span> Modelos <span class="caret"></span></a>
-                  <ul class="dropdown-menu changeModel">
-                      <li value="treehouse_logo.js"><a> TreeHouseLogo</a></li>
-                      <li value="macbook.obj"><a> Macbook</a></li>
-                      <li value="dodecahedron.obj"><a> dodecahedro</a></li>
-                      <li value="male02.obj"><a> Hombre</a></li>
-                      <li value="flamingo.js"><a> flamingo</a></li>
-                  </ul>
-              </li>
-          </ul>
-        </div><!-- /.navbar-collapse -->
-      </div><!-- /.container-fluid -->
-    </nav>  
-
+<nav class="navbar navbar-default navbar-static-top">
+  <div class="container">
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <form class="navbar-form navbar-left">
+        <div class="form-group">
+          <label for="dimension">Divisiones</label>
+          <input type="text" class="form-control little" name="dimension" 
+          id="dimension" placeholder="32" value="32">
+        </div>
+        <button type="button" class="btn btn-default" id="cargar">Cargar</button> 
+        <div class="checkbox navbar-btn">
+            <label class="navbar-link" for="wireframe">
+                <input type="checkbox" class="autosubmit" id="wireframe" value="true">
+                Wireframes
+            </label>
+        </div>
+        <div class="checkbox navbar-btn">
+            <label class="navbar-link" for="gridbox">
+                <input type="checkbox" class="autosubmit" id="gridbox" value="true">
+                Grid
+            </label>
+        </div>
+      </form>
+      <div class="nav navbar-nav navbar-right">
+        <ul class="nav navbar-nav">   
+          <li id="DownModel" class="btn btn-default btn-file">
+            Descargar Modelo 
+          </li>
+          <li class="btn btn-default btn-file">
+            Nuevo Modelo <input type="file" id="NuevoModelo"/>
+          </li>
+          <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span> Modelos <span class="caret"></span></a>
+              <ul class="dropdown-menu changeModel">
+                  <li value="treehouse_logo.js"><a> TreeHouseLogo</a></li>
+                  <li value="macbook.obj"><a> Macbook</a></li>
+                  <li value="dodecahedron.obj"><a> dodecahedro</a></li>
+                  <li value="male02.obj"><a> Hombre</a></li>
+                  <li value="flamingo.js"><a> flamingo</a></li>
+              </ul>
+          </li>   
+        </ul>
+      </div>
+    </div><!-- /.navbar-collapse -->
+  </div>
+</nav> 
     <canvas id="Original"></canvas>
     <canvas id="Simplificado" ></canvas>
 
@@ -66,9 +74,6 @@
       <div>Vertices: <span class="vertices"></span></div>
       <div>Log: <span class="log"></span></div>
     </div>
-  </div>
-
-
 </body>
 
 <script type="text/javascript" src="./static/js/main.js"></script>
