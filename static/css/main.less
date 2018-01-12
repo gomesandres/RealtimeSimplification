@@ -13,7 +13,11 @@ body {
 .navbar{
     z-index: 1000;
 }
+input{
+    width:50px;
+}
 #Original{
+    z-index: 0;
     position: absolute;
     left:0px  !important;
     top:0px;
@@ -22,6 +26,7 @@ body {
 }
 
 #Simplificado{
+    z-index: 0;
     position: absolute;
     right:0px;
     top:0px;
@@ -29,6 +34,7 @@ body {
     height:100%;
 }
 #infoleft{
+    z-index: 1;
     background-color:#000c39;
     opacity: 0.9;
     cursor: pointer;
@@ -40,6 +46,7 @@ body {
 }
 
 #inforight{
+    z-index: 1;
     background-color:#000c39;
     opacity: 0.9;
     cursor: pointer;
@@ -48,6 +55,20 @@ body {
     padding:20px;
     top: 60px  !important;
     right: 10px  !important;
+}
+
+#PNGOriginal{
+    z-index: 1001;
+    position: absolute;
+    bottom: 0px;  !important;
+    left: 100px  !important;
+}
+
+#PNGSimplificado{
+    z-index: 1002;
+    position: absolute;
+    bottom: 0px  !important;
+    right: 100px  !important;
 }
 
 .little{
@@ -69,3 +90,4 @@ body {
     cursor: inherit;
     display: block;
 }
+

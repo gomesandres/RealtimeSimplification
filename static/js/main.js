@@ -1,4 +1,7 @@
 var urlParams = {};
+var WIDTH = window.innerWidth/2;
+var HEIGHT = window.innerHeight;
+
 location.search.replace(
     new RegExp("([^?=&]+)(=([^&]*))?", "g"),
     function($0, $1, $2, $3) {
@@ -14,6 +17,13 @@ function ownCubic(x){return x*x*x;}
 
 function setStatic(static_url){static = static_url;}
 
+function getXYZ(array,index){
+    return new THREE.Vector3( 
+        array[(index*3)],
+        array[(index*3)+1],
+        array[(index*3)+2]);
+}
+
 function setXYZ(array,index,x,y,z){
     var i = index*3;
     array[i++]=x;
@@ -21,6 +31,33 @@ function setXYZ(array,index,x,y,z){
     array[i]=z;
 }
 
+function vertexCount(pos){
+    var verticesMap = {}; // Hashmap for looking up vertices by position coordinates (and making sure they are unique)
+    var unique = [];
+
+    var v, key;
+    var precisionPoints = 4; // number of decimal points, e.g. 4 for epsilon of 0.0001
+    var precision = Math.pow( 10, precisionPoints );
+    var i, il, face;
+    var indices, j, jl;
+
+    for ( i = 0, il = pos.count; i < il; i ++ ) {
+
+        v = getXYZ(pos.array,i);
+        key =   Math.round( v.x * precision ) +
+                '_' + 
+                Math.round( v.y * precision ) + 
+                '_' + 
+                Math.round( v.z * precision );
+
+        if ( verticesMap[ key ] === undefined ) {
+            verticesMap[ key ] = i;
+            unique.push( v );
+        }
+
+    }
+    return unique.length
+}
 if (!Array.prototype.last){
     Array.prototype.last = function(){
         return this[this.length - 1];
@@ -63,44 +100,39 @@ function nearestPow2( aSize ){
 }
 
 class WebGl{
-    constructor(canvas) {
+    constructor(canvas, cam) {
         //Variable de debuggeo, si esta en true realizara las operaciones
         //utilizando el cpu en vez del gpu para facilitar la validación
+        
         this.DEBUG = false; //Esta en desuso or los momentos.
-
         this.static = './static/';
         this.scene = new THREE.Scene();
         this.sceneRTT = new THREE.Scene();
         this.canvas = document.getElementById(canvas);
-        this.WIDTH = window.innerWidth/2;
-        this.HEIGHT = window.innerHeight;
-        this.canvas.width = this.WIDTH;
-        this.canvas.height = this.HEIGHT;
+        this.canvas.width = WIDTH;
+        this.canvas.height = HEIGHT;
+
         this.renderer = new THREE.WebGLRenderer({
             antialias:true,
-            canvas : this.canvas
+            canvas : this.canvas,
+            preserveDrawingBuffer: true 
         });
 
         this.NewMesh = false;
-
-        this.renderer.setSize(this.WIDTH, this.HEIGHT);
+        this.renderer.setSize(WIDTH, HEIGHT);
         this.renderer.autoClear = false;
-        this.cam = new THREE.PerspectiveCamera( 45, 
-                                                this.WIDTH / this.HEIGHT, 
-                                                0.1, 
-                                                20000
-                                            );
-        this.cam.position.set(2.5,4,1);
-        this.cam.up = new THREE.Vector3(0,1,0)
+        this.controls = new THREE.OrbitControls(cam, this.renderer.domElement);
         this.camRTT = new THREE.OrthographicCamera( -1,1, 1, -1, 0.1,1);
         this.camRTT.position.set(0,0,0);
         this.renderer.shadowMap.enabled = true;
-        this.controls = new THREE.OrbitControls(this.cam, this.renderer.domElement);
-        this.controls.userPanSpeed = 0.15;
+        this.controls.userPanSpeed = 0.05;
+        this.controls.rotateSpeed  = 0.15;
+        this.controls.zoomSpeed  = 0.0025;
         this.controls.center.set( 2.5, 2.5, 2.5);
         this.stats = new Stats();
         this.stats.domElement.style.position = 'absolute';
         this.stats.domElement.style.bottom = '0px';
+
         if(canvas == 'Simplificado'){
             this.stats.domElement.style.right = '0px';
             this.dialog = $("#inforight .log");
@@ -112,6 +144,7 @@ class WebGl{
             this.caraslog = $("#infoleft .caras");
             this.verticeslog = $("#infoleft .vertices");
         }
+
         setInterval(function(){
             //console.log(this.dialog);
             this.dialog.contents().filter(function() {
@@ -119,6 +152,7 @@ class WebGl{
                   }).first().remove();
             this.dialog.children().first().remove();
         }.bind(this), 3000);
+
         this.textures = [];
         this.PassOneResult = [];
         this.Simplify = false;
@@ -252,7 +286,6 @@ class WebGl{
                                     -dot(VA,cross(VB,VC))
                             );
 
-
                 mat4 cuadraticError = vectorTranspose(n,n);
 
                 Result[0]= cuadraticError[0][0];
@@ -274,21 +307,8 @@ class WebGl{
             }
 
             void main(void) {
-                if( VA == VertPos ){
-                    gl_Position = vec4(calculateCuadratic(), 1.0);
-                    gl_PointSize = 1.0;    
-                }
-
-                if( VB == VertPos && VA != VB ){
-                    gl_Position = vec4(calculateCuadratic(), 1.0);
-                    gl_PointSize = 1.0;    
-                }
-                  
-                if( VC == VertPos && VA != VC && VB != VC ){
-                    gl_Position = vec4(calculateCuadratic(), 1.0);
-                    gl_PointSize = 1.0;    
-                }
-
+                gl_Position = vec4(calculateCuadratic(), 1.0);
+                gl_PointSize = 1.0;  
             }
         `;
         
@@ -390,6 +410,10 @@ class WebGl{
 
                 mat3 Errorm3 = mat3(cuadraticError);
 
+                mat3 Identity = mat3(0.0000001);
+
+                Errorm3 = Errorm3 + Identity;
+
                 float det = determinant(Errorm3);
 
                 mat3 A = inverse(Errorm3);
@@ -400,16 +424,17 @@ class WebGl{
 
                 x = normalize(x);
 
-                x = x * CellWidth*0.1;
+                x = x*CellWidth*0.0001;
 
-                vec3 result;
+                vec3 promedio;
 
                 if(ForthText.w != 0.0){
-                    result = (ForthText.xyz/ForthText.w);
+                    promedio = (ForthText.xyz/ForthText.w);
                 }else{
-                    result = ForthText.xyz;
+                    promedio = ForthText.xyz;
                 }
-                //result += x;
+
+                vec3 result = x + promedio;
 
 
                 gl_FragData[0] = vec4(result,1.0);                               
@@ -541,7 +566,7 @@ class WebGl{
 
     initGL() {
         try {
-            this.gl = this.canvas.getContext("experimental-webgl");
+            this.gl = this.canvas.getContext("experimental-webgl",{ preserveDrawingBuffer :true });
             this.gl.viewportWidth = this.canvas.width;
             this.gl.viewportHeight = this.canvas.height;
         } catch (e) {
@@ -619,11 +644,11 @@ class WebGl{
     }
 
     resize(){
-        this.WIDTH = window.innerWidth/2;
-        this.HEIGHT = window.innerHeight;
-        this.cam.aspect = this.WIDTH / this.HEIGHT;
-        this.cam.updateProjectionMatrix();
-        this.renderer.setSize( this.WIDTH, this.HEIGHT );
+        WIDTH = window.innerWidth/2;
+        HEIGHT = window.innerHeight;
+        cam.aspect = WIDTH / HEIGHT;
+        cam.updateProjectionMatrix();
+        this.renderer.setSize( WIDTH, HEIGHT );
     }
 
     setDialogText(Text){
@@ -742,7 +767,7 @@ class WebGl{
                   }).first().remove();
 
             this.caraslog.append(document.createTextNode(pos.count / 3));
-            this.verticeslog.append(document.createTextNode(pos.count));
+            this.verticeslog.append(document.createTextNode(vertexCount(pos)));
             var Mesh;
             var mat = new THREE.MeshPhongMaterial( {
                 color: 0xff0000,
@@ -766,6 +791,7 @@ class WebGl{
     }
 
     stepOne(){
+        this.TS = performance.now();
         var gl = this.gl;       
         var geo = this.geometry;
         var len = geo.attributes.position.count;
@@ -827,13 +853,16 @@ class WebGl{
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
-        this.renderer.setSize(this.WIDTH, this.HEIGHT);
+        this.renderer.setSize(WIDTH, HEIGHT);
         this.RemoveMesh("Simplificado");        
+        this.TE = performance.now();
+        this.setDialogText("" + (this.TE - this.TS));
         this.setDialogText("Calculando vértices representativos");
         setTimeout(this.stepTwo.bind(this),500);
     }
 
     stepTwo(){
+        this.TS = performance.now();
         var gl = this.gl;
         var plane = new THREE.PlaneBufferGeometry( this.TexDim, this.TexDim );
 
@@ -863,13 +892,16 @@ class WebGl{
         this.renderer.render( this.sceneRTT, this.camRTT );
 
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
-        this.renderer.setSize(this.WIDTH, this.HEIGHT);
+        this.renderer.setSize(WIDTH, HEIGHT);
         this.RemoveMesh("Plano");
+        this.TE = performance.now();
+        this.setDialogText("" + (this.TE - this.TS));
         this.setDialogText("Extrayendo la malla del gpu");
         setTimeout(this.stepThree.bind(this),500);
     }
 
     stepThree(){
+        this.TS = performance.now();
         /*
         Se tiene que enviar de nuevo la malla original
         y las coordenadas representaste de cada celda
@@ -933,13 +965,16 @@ class WebGl{
         this.renderer.clear();
         this.renderer.render( this.sceneRTT, this.camRTT );
         gl.bindFramebuffer(gl.FRAMEBUFFER,null) 
-        this.renderer.setSize(this.WIDTH, this.HEIGHT);
+        this.renderer.setSize(WIDTH, HEIGHT);
         this.RemoveMesh("Simplificado");
+        this.TE = performance.now();
+        this.setDialogText("" + (this.TE - this.TS));
         this.setDialogText("Generando nueva malla");
         setTimeout(this.stepFour.bind(this),500);
     }
 
     stepFour(){
+        this.TS = performance.now();
         var gl = this.gl;
         var framebuffer = gl.createFramebuffer();
         gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -1000,7 +1035,7 @@ class WebGl{
             }).first().remove();
 
         this.caraslog.append(document.createTextNode(position.count / 3));
-        this.verticeslog.append(document.createTextNode(position.count));
+        this.verticeslog.append(document.createTextNode(vertexCount(position)));
 
         // itemSize = 3 because there are 3 values (components) per vertex
         geometry.addAttribute( 'position', position);
@@ -1023,6 +1058,8 @@ class WebGl{
         this.scene.add( this.wireframe );
         this.scene.add(mesh);
         this.NewMesh = mesh;
+        this.TE = performance.now();
+        this.setDialogText("" + (this.TE - this.TS));
         this.debuglog();
     }
 
@@ -1145,7 +1182,7 @@ class WebGl{
         var CheckGridbox = document.getElementById("gridbox").checked;
         if (typeof this.wireframe !== 'undefined')this.wireframe.visible = CheckWireframe;
         if (typeof this.gridHelper !== 'undefined')this.gridHelper.visible = CheckGridbox
-        this.renderer.render( this.scene, this.cam );
+        this.renderer.render( this.scene, cam );
         this.controls.update();
     }
 
@@ -1189,13 +1226,15 @@ class WebGl{
         ground.rotation.x = -Math.PI/2;
         ground.position.y = -5;
         ground.receiveShadow = true;
-        //this.scene.add(ground);
+        this.scene.add(ground);
+
         var uniforms = {
             topColor:    { type: "c", value: new THREE.Color( 0x0077ff ) },
             bottomColor: { type: "c", value: new THREE.Color( 0x0077ff ) },
             offset:      { type: "f", value: 33 },
             exponent:    { type: "f", value: 0.6 }
         };
+
         uniforms.topColor.value.copy( this.hemiLight.color );
         this.scene.fog.color.copy( uniforms.bottomColor.value );
         var skyGeo = new THREE.SphereGeometry( 4000, 32, 15 );
@@ -1221,12 +1260,33 @@ var getUrlParameter = function getUrlParameter(sParam) {
     }
 };
 
-webgl = new WebGl("Original");
-webgl2 = new WebGl("Simplificado");
+function ExportPNG(canvas){
+    var element = document.createElement('a');
+    var data = document.getElementById(canvas).toDataURL('png').replace('png','octet-stream')
+    element.setAttribute('href', data);
+    element.setAttribute('download', canvas+".png");
+    element.style.display = 'none';
+    document.body.appendChild(element);
+    element.click();
+}
+
+var cam = new THREE.PerspectiveCamera( 45, 
+                                        WIDTH / HEIGHT, 
+                                        0.1, 
+                                        20000
+                                    );
+cam.position.set(2.5,4,1);
+cam.up = new THREE.Vector3(0,1,0);
+
+
+webgl = new WebGl("Original", cam);
+webgl2 = new WebGl("Simplificado", cam);
 
 
 $(function(){
+    //var obj = 'flamingo.js'
     var obj = 'treehouse_logo.js'
+    //var obj = 'gloveLow_poly.obj'
     webgl.load(obj);
     webgl2.load(obj,true);
 
@@ -1271,6 +1331,15 @@ $(function(){
         element.click();
 
         document.body.removeChild(element);
+    });
+
+
+    $('#PNGOriginal').on('click', function(){
+            ExportPNG('Original');
+    });
+
+    $('#PNGSimplificado').on('click', function(){
+            ExportPNG('Simplificado');
     });
 
 });
